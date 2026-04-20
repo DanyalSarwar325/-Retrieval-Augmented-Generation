@@ -1,0 +1,4 @@
+Introduction
+This is a sample text file for testing the Document class in LangChain.
+It contains multiple lines of text to demonstrate how the Document class can handle larger content.     
+The Document class is useful for representing text data along with its associated metadata, such as the source, author, and number of pages.
