@@ -8,3 +8,11 @@ faiss-cpu
 chromadb
 langchain_groq
 dotenv
+fastapi
+uvicorn[standard]
+pydantic-settings
+python-dotenv
+pytest
+httpx
+supabase
+python-multipart

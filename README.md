@@ -53,6 +53,61 @@ traditionalRag/
    poetry install
    ```
 
+## FastAPI Setup
+
+The project now includes an API app in `Fast/` that exposes health, retrieval, query, and admin reindex endpoints.
+
+### Run API
+
+```bash
+uvicorn Fast.main:app --reload
+```
+
+### API Endpoints
+
+- `GET /health`
+- `GET /ready`
+- `POST /v1/query`
+- `POST /v1/retrieve`
+- `POST /v1/index/rebuild` (requires `x-admin-key` header)
+- `POST /v1/upload/pdf` (uploads PDF to Supabase Storage)
+
+### Supabase Setup (Storage + Postgres)
+
+Create a `documents` table in Supabase:
+
+```sql
+create table if not exists documents (
+   id uuid primary key default gen_random_uuid(),
+   filename text not null,
+   storage_path text not null,
+   public_url text,
+   content_type text,
+   size_bytes bigint,
+   uploaded_at timestamptz default now()
+);
+```
+
+Environment variables:
+
+```
+SUPABASE_URL=...
+SUPABASE_KEY=...
+SUPABASE_BUCKET=pdfs
+SUPABASE_TABLE=documents
+SUPABASE_UPLOAD_PREFIX=pdfs
+SUPABASE_PUBLIC_BUCKET=true
+MAX_UPLOAD_MB=50
+```
+
+### Example Query Request
+
+```bash
+curl -X POST "http://127.0.0.1:8000/v1/query" \
+   -H "Content-Type: application/json" \
+   -d '{"query": "What are servers and its types?", "top_k": 3, "include_sources": true}'
+```
+
 ## Dependencies
 
 The project uses the following key libraries:
