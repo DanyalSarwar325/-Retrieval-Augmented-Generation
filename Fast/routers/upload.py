@@ -2,17 +2,21 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
 from Fast.config import get_settings
 from Fast.schemas import UploadResponse
+from Fast.dependencies import get_rag_service
 from Fast.services.supabase_client import get_supabase_client
 
 router = APIRouter()
 
 
 @router.post("/upload/pdf", response_model=UploadResponse)
-def upload_pdf(file: UploadFile = File(...)) -> UploadResponse:
+def upload_pdf(
+    file: UploadFile = File(...),
+    rag_service=Depends(get_rag_service),
+) -> UploadResponse:
     settings = get_settings()
 
     if not settings.supabase_url or not settings.supabase_key:
@@ -74,6 +78,19 @@ def upload_pdf(file: UploadFile = File(...)) -> UploadResponse:
     record = None
     if getattr(db_result, "data", None):
         record = db_result.data[0]
+
+    try:
+        rag_service.ingest_pdf_bytes(
+            data=data,
+            filename=safe_name,
+            storage_path=object_path,
+            public_url=public_url,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Embedding failed: {exc}",
+        )
 
     return UploadResponse(
         id=(record.get("id") if record else None),

@@ -1,8 +1,10 @@
 import os
+import tempfile
 import time
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from langchain_groq import ChatGroq
+from langchain_community.document_loaders import PyPDFLoader
 
 from src.data_loader import load_all_documents
 from src.vector_store import FaissVectorStore
@@ -119,4 +121,42 @@ class RAGService:
             "document_count": len(docs),
             "duration_ms": duration_ms,
             "data_dir": target_data_dir,
+        }
+
+    def ingest_pdf_bytes(
+        self,
+        data: bytes,
+        filename: str,
+        storage_path: str,
+        public_url: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        self.initialize()
+        assert self.vectorstore is not None
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+            tmp_file.write(data)
+            tmp_path = tmp_file.name
+
+        try:
+            loader = PyPDFLoader(tmp_path)
+            docs = loader.load()
+        finally:
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
+
+        base_metadata = {
+            "source_file": filename,
+            "storage_path": storage_path,
+            "public_url": public_url,
+            "file_type": "pdf",
+        }
+
+        chunk_count = self.vectorstore.add_documents(docs, base_metadata=base_metadata)
+
+        return {
+            "document_count": len(docs),
+            "chunk_count": chunk_count,
+            "storage_path": storage_path,
         }
